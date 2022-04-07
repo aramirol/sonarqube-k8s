@@ -1,0 +1,258 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sonarqube
+
+---
+
+# Postgres deployment ##############################################################
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sonarqube-postgres-pv
+  namespace: sonarqube
+spec:
+  storageClassName: sonarqube-postgres-pv
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/sonarqube_k8s/sonarqube-postgres/
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: sonarqube-postgres-pvc
+  namespace: sonarqube
+spec:
+  storageClassName: sonarqube-postgres-pv
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres
+  namespace: sonarqube
+  labels:
+    app: postgres
+data:
+  POSTGRESQL_USERNAME: sonar_user
+  POSTGRESQL_DATABASE: sonar_db
+  POSTGRESQL_PASSWORD: S0N4RQUB3
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: sonarqube
+  labels:
+    app: postgres
+spec:
+  ports:
+  - port: 5432
+    name: postgres
+  selector:
+    app: postgres
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: sonarqube
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        fsGroup: 2000 
+      containers:
+      - name: postgress
+        image: bitnami/postgresql
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        envFrom:
+        - configMapRef:
+            name: postgres
+        volumeMounts:
+        - name: postgres
+          mountPath: /bitnami/postgresql
+      volumes:
+      - name: postgres
+        persistentVolumeClaim:
+          claimName: sonarqube-postgres-pvc
+
+---
+
+# Sonarqube deployment ##############################################################
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sonarqube-data-pv
+  namespace: sonarqube
+spec:
+  storageClassName: sonarqube-data-pv
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/sonarqube_k8s/sonarqube-data/
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: sonarqube-data-pvc
+  namespace: sonarqube
+spec:
+  storageClassName: sonarqube-data-pv
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-config
+  namespace: sonarqube
+  labels:
+    app: sonarqube
+data:
+  SONARQUBE_JDBC_URL: "jdbc:postgresql://postgres:5432/sonar_db"
+  SONARQUBE_JDBC_USERNAME: "sonar_user"
+  SONARQUBE_JDBC_PASSWORD: "S0N4RQUB3"
+  JAVA_OPTS: "-Duser.timezone=Europe/Madrid -Xmx2048m"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  namespace: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  ports:
+  - port: 9000
+    name: sonarqube
+  selector:
+    app: sonarqube
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+  namespace: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      initContainers:
+      - name: init
+        image: busybox
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+      containers:
+      - name: sonarqube
+        image: sonarqube:8.9.1-community
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+        envFrom:
+        - configMapRef:
+            name: sonarqube-config
+        volumeMounts:
+        - name: app-pvc
+          mountPath: "/opt/sonarqube/data/"
+          subPath: data
+        - name: app-pvc
+          mountPath: "/opt/sonarqube/extensions/"
+          subPath: extensions
+        resources:
+          requests:
+            memory: "1024Mi"
+          limits:
+            memory: "2048Mi"
+      volumes:
+      - name: app-pvc
+        persistentVolumeClaim:
+          claimName: sonarqube-data-pvc
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-sonarqube
+  namespace: sonarqube
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/secure-backends: "true"
+spec:
+  rules:
+  - host: sonarqube.demo.lab
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: sonarqube
+            port:
+              number: 9000
+
+---
