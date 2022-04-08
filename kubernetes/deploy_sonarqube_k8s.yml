@@ -205,6 +205,11 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
+      - name: check-db-ready
+        image: postgres:latest
+        command: ['sh', '-c', 
+          'until pg_isready -h postgres -p 5432; 
+          do echo waiting for database; sleep 2; done;']
       containers:
       - name: sonarqube
         image: sonarqube:8.9.1-community
