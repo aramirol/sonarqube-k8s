@@ -5,7 +5,7 @@
 ## What is?
 
 [![Kubernetes](https://img.shields.io/badge/kubernetes-v1.19.x-blue?logo=kubernetes&logoColor=lightgrey)](https://github.com/aramirol/istio-example)
-[![Kubernetes](https://img.shields.io/badge/sonarqube-latest-darkblue?logo=sonarqube&logoColor=lightgrey)](https://github.com/aramirol/istio-example)
+[![Kubernetes](https://img.shields.io/badge/sonarqube-lts_community-blue?logo=sonarqube&logoColor=lightgrey)](https://github.com/aramirol/istio-example)
 [![License](https://img.shields.io/badge/license-MIT-green?logo=github&logoColor=lightgrey)](https://github.com/aramirol/sonarqube-k8s/blob/main/LICENSE.md)
 
 This is a tutorial about how to deploy Sonarqube on a Kubernetes Cluster easily.

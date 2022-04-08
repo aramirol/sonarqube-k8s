@@ -212,7 +212,7 @@ spec:
           do echo waiting for database; sleep 2; done;']
       containers:
       - name: sonarqube
-        image: sonarqube:8.9.1-community
+        image: sonarqube:lts-community
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000
