@@ -50,6 +50,8 @@ $ kubectl apply -f ./sonarqube-k8s/kubernetes/deploy_sonarqube_k8s.yml
     "ingress.networking.k8s.io/ingress-sonarqube" created
 ```
 
+**NOTE:** It may take a few minutes for the app to be up and running.
+
 ## Delete App
 
 You can use the same deploy yaml file to delete all objects. Just use the following command:
