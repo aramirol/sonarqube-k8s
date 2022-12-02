@@ -76,4 +76,4 @@ kubectl delete -f ./sonarqube-k8s/kubernetes/deploy_sonarqube_k8s.yml
 
 MIT License
 
-See [LICENSE](https://github.com/aramirol/sonarqube-k8s/blob/main/LICENSE) to see the full text.
+See [LICENSE](https://github.com/aramirol/sonarqube-k8s/blob/main/LICENSE) to see the full text. 
